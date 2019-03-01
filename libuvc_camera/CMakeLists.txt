@@ -6,7 +6,8 @@ find_package(catkin REQUIRED COMPONENTS roscpp camera_info_manager dynamic_recon
 
 generate_dynamic_reconfigure_options(cfg/UVCCamera.cfg)
 
-find_package(libuvc REQUIRED)
+add_subdirectory(libuvc)
+#find_package(libuvc REQUIRED)
 
 catkin_package(
   CATKIN_DEPENDS
@@ -26,7 +27,7 @@ find_package(Boost REQUIRED COMPONENTS thread)
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(camera_node src/main.cpp src/camera_driver.cpp)
-target_link_libraries(camera_node ${libuvc_LIBRARIES} ${Boost_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(camera_node ${libuvc_LIBRARIES} ${Boost_LIBRARIES} ${catkin_LIBRARIES} uvc)
 add_dependencies(camera_node ${PROJECT_NAME}_gencfg)
 
 add_library(libuvc_camera_nodelet src/nodelet.cpp src/camera_driver.cpp)

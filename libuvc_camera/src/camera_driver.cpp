@@ -112,6 +112,7 @@ void CameraDriver::ReconfigureCallback(UVCCameraConfig &new_config, uint32_t lev
     cinfo_manager_.loadCameraInfo(new_config.camera_info_url);
 
   if (state_ == kRunning) {
+    
 #define PARAM_INT(name, fn, value) if (new_config.name != config_.name) { \
       int val = (value);                                                \
       if (uvc_set_##fn(devh_, val)) {                                   \
@@ -167,9 +168,17 @@ void CameraDriver::ImageCallback(uvc_frame_t *frame) {
   sensor_msgs::Image::Ptr image(new sensor_msgs::Image());
   image->width = config_.width;
   image->height = config_.height;
-  image->step = image->width * 3;
-  image->data.resize(image->step * image->height);
-
+  if (frame->frame_format == UVC_FRAME_FORMAT_GRAY8)
+    {
+      image->step = image->width;
+      image->data.resize(image->step * image->height);
+    }
+  else
+    {
+      image->step = image->width * 3;
+      image->data.resize(image->step * image->height);
+    }
+  
   if (frame->frame_format == UVC_FRAME_FORMAT_BGR){
     image->encoding = "bgr8";
     memcpy(&(image->data[0]), frame->data, frame->data_bytes);
@@ -197,7 +206,12 @@ void CameraDriver::ImageCallback(uvc_frame_t *frame) {
     }
     image->encoding = "rgb8";
     memcpy(&(image->data[0]), rgb_frame_->data, rgb_frame_->data_bytes);
-  } else {
+  } else if (frame->frame_format == UVC_FRAME_FORMAT_GRAY8) {
+    image->encoding = "mono8";
+    memcpy(&(image->data[0]), frame->data, frame->data_bytes);
+  }
+  else
+    {
     uvc_error_t conv_ret = uvc_any2bgr(frame, rgb_frame_);
     if (conv_ret != UVC_SUCCESS) {
       uvc_perror(conv_ret, "Couldn't convert frame to RGB");
@@ -215,7 +229,9 @@ void CameraDriver::ImageCallback(uvc_frame_t *frame) {
   image->header.stamp = timestamp;
   cinfo->header.frame_id = config_.frame_id;
   cinfo->header.stamp = timestamp;
-
+  cinfo->height = image->height;
+  cinfo->width = image->width;
+  
   cam_pub_.publish(image, cinfo);
 
   if (config_changed_) {
