@@ -19,7 +19,8 @@
       <!-- choose whichever uncompressed format the camera supports: -->
       <param name="video_mode" value="gray8"/> <!-- or yuyv/nv12/jpeg -->
       <param name="frame_rate" value="45"/>
-
+      <param name="exposure_absolute" value="0.015"/>
+      <param name="brightness" value="64"/>
       <param name="timestamp_method" value="start"/> <!-- start of frame -->
 
     </node>

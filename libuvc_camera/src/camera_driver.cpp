@@ -99,6 +99,7 @@ void CameraDriver::Stop() {
 void CameraDriver::ReconfigureCallback(UVCCameraConfig &new_config, uint32_t level) {
   boost::recursive_mutex::scoped_lock(mutex_);
 
+  ROS_INFO("Reconfigure with level: 0x%x", level);
   if ((level & kReconfigureClose) == kReconfigureClose) {
     if (state_ == kRunning)
       CloseCamera();
@@ -112,33 +113,47 @@ void CameraDriver::ReconfigureCallback(UVCCameraConfig &new_config, uint32_t lev
     cinfo_manager_.loadCameraInfo(new_config.camera_info_url);
 
   if (state_ == kRunning) {
-    
-#define PARAM_INT(name, fn, value) if (new_config.name != config_.name) { \
-      int val = (value);                                                \
+
+      #define PARAM_INT(name, fn, value) if (new_config.name != config_.name) { \
+      int val = (value);						\
       if (uvc_set_##fn(devh_, val)) {                                   \
         ROS_WARN("Unable to set " #name " to %d", val);                 \
         new_config.name = config_.name;                                 \
       }                                                                 \
     }
 
-    PARAM_INT(scanning_mode, scanning_mode, new_config.scanning_mode);
-    PARAM_INT(auto_exposure, ae_mode, 1 << new_config.auto_exposure);
-    PARAM_INT(auto_exposure_priority, ae_priority, new_config.auto_exposure_priority);
-    PARAM_INT(exposure_absolute, exposure_abs, new_config.exposure_absolute * 10000);
-    PARAM_INT(auto_focus, focus_auto, new_config.auto_focus ? 1 : 0);
-    PARAM_INT(focus_absolute, focus_abs, new_config.focus_absolute);
-    PARAM_INT(gain, gain, new_config.gain);
-    PARAM_INT(iris_absolute, iris_abs, new_config.iris_absolute);
-    PARAM_INT(brightness, brightness, new_config.brightness);
     
+    //PARAM_INT(scanning_mode, scanning_mode, new_config.scanning_mode);
+    //PARAM_INT(auto_exposure, ae_mode, 1 << new_config.auto_exposure);
+    //PARAM_INT(auto_exposure_priority, ae_priority, new_config.auto_exposure_priority);
+    PARAM_INT(exposure_absolute, exposure_abs, new_config.exposure_absolute * 10000);
+    //PARAM_INT(auto_focus, focus_auto, new_config.auto_focus ? 1 : 0);
+    //PARAM_INT(focus_absolute, focus_abs, new_config.focus_absolute);
+    //PARAM_INT(gain, gain, new_config.gain);
+    //PARAM_INT(iris_absolute, iris_abs, new_config.iris_absolute);
+    PARAM_INT(brightness, brightness, new_config.brightness);
 
+    
+    uint32_t cur_exp = 0; uvc_error_t ae_error;
+    //ROS_INFO("Setting exposure to %f", new_config.exposure_absolute * 10000);
+    //ae_error = uvc_set_exposure_abs(devh_, new_config.exposure_absolute * 10000);
+    
+    ae_error = uvc_get_exposure_abs(devh_, &cur_exp, UVC_GET_CUR);
+    ROS_INFO("Using exposure: %d", cur_exp);
+
+    int16_t brightness;
+    uvc_get_brightness(devh_, &brightness, UVC_GET_CUR);
+    ROS_INFO("Brightness: %d", brightness);
+    
+    /*
     if (new_config.pan_absolute != config_.pan_absolute || new_config.tilt_absolute != config_.tilt_absolute) {
       if (uvc_set_pantilt_abs(devh_, new_config.pan_absolute, new_config.tilt_absolute)) {
         ROS_WARN("Unable to set pantilt to %d, %d", new_config.pan_absolute, new_config.tilt_absolute);
         new_config.pan_absolute = config_.pan_absolute;
         new_config.tilt_absolute = config_.tilt_absolute;
       }
-    }
+      }
+    */
     // TODO: roll_absolute
     // TODO: privacy
     // TODO: backlight_compensation
@@ -284,7 +299,7 @@ void CameraDriver::AutoControlsCallback(
     }
     }
 
-    // config_server_.updateConfig(config_);
+    config_server_.updateConfig(config_);
   }
 }
 
